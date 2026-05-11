@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#e63946">
+  <title>Rauchmelder</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red:    #e63946;
+      --bg:     #f2f2f7;
+      --card:   #ffffff;
+      --label:  #636366;
+      --text:   #1c1c1e;
+      --border: #c6c6c8;
+      --green:  #34c759;
+      --yellow: #ff9500;
+      --danger: #ff3b30;
+      --blue:   #007aff;
+      --chip:   #e5e5ea;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      overflow: hidden;
+    }
+    #root { height: 100vh; height: 100dvh; }
+
+    /* ── App shell ── */
+    #app { display: flex; flex-direction: column; height: 100%; }
+    .app-header {
+      display: flex; align-items: center; gap: 9px;
+      padding: 14px 16px 6px;
+      background: var(--red);
+      flex-shrink: 0;
+    }
+    .app-header img { width: 30px; height: 30px; border-radius: 7px; }
+    .app-header-title { font-size: 17px; font-weight: 700; color: #fff; }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex; gap: 3px;
+      padding: 8px 8px 0;
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      flex: 1; padding: 7px 2px;
+      border: none; border-radius: 8px;
+      background: var(--chip); color: var(--label);
+      font-size: 13px; font-family: inherit;
+      cursor: pointer;
+    }
+    .tab-btn.active { background: var(--red); color: #fff; font-weight: 600; }
+
+    /* ── Scroll ── */
+    .scroll {
+      flex: 1; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 10px 12px 32px;
+    }
+
+    /* ── Karten ── */
+    .card {
+      background: var(--card); border-radius: 14px;
+      padding: 16px; margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 11px; font-weight: 700;
+      color: var(--label); letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 0 4px 6px;
+    }
+
+    /* ── Geräteliste ── */
+    .geraet-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .geraet-item:last-child { border-bottom: none; }
+    .geraet-item:active { opacity: 0.6; }
+    .ampel {
+      width: 12px; height: 12px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ampel-gruen  { background: var(--green); }
+    .ampel-gelb   { background: var(--yellow); }
+    .ampel-rot    { background: var(--danger); }
+    .geraet-info  { flex: 1; min-width: 0; }
+    .geraet-name  { font-size: 15px; font-weight: 500; }
+    .geraet-meta  { font-size: 12px; color: var(--label); margin-top: 2px; }
+    .geraet-arrow { color: var(--border); font-size: 14px; }
+
+    /* ── Formular ── */
+    .field-group { margin-bottom: 2px; }
+    .field-group label {
+      display: block; font-size: 13px;
+      color: var(--label); margin-bottom: 4px;
+    }
+    .field-group input, .field-group select, .field-group textarea {
+      display: block; width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 17px; font-family: inherit;
+      background: var(--card); color: var(--text);
+      margin-bottom: 10px;
+      -webkit-appearance: none; appearance: none;
+    }
+    .field-group textarea {
+      resize: none; overflow: hidden;
+      min-height: 44px; line-height: 1.4;
+    }
+    .field-group input:focus,
+    .field-group select:focus,
+    .field-group textarea:focus { outline: none; border-color: var(--red); }
+    .req { color: var(--danger); }
+
+    /* ── Ergebnis-Chips ── */
+    .ergebnis-bar {
+      display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .ergebnis-chip {
+      padding: 8px 16px; border: 1.5px solid var(--border);
+      border-radius: 20px; font-size: 15px; font-family: inherit;
+      background: var(--card); color: var(--text);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .ergebnis-chip.selected-ok     { background: var(--green);  color: #fff; border-color: var(--green);  }
+    .ergebnis-chip.selected-warn   { background: var(--yellow); color: #fff; border-color: var(--yellow); }
+    .ergebnis-chip.selected-defekt { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      display: block; width: 100%; padding: 14px;
+      background: var(--red); color: #fff;
+      border: none; border-radius: 12px;
+      font-size: 17px; font-weight: 600; font-family: inherit;
+      cursor: pointer; margin-top: 4px;
+    }
+    .btn-primary:active { opacity: 0.8; }
+    .btn-secondary {
+      display: block; width: 100%; padding: 12px;
+      background: var(--chip); color: var(--text);
+      border: none; border-radius: 12px;
+      font-size: 17px; font-weight: 500; font-family: inherit;
+      cursor: pointer; margin-bottom: 6px;
+    }
+    .btn-secondary:active { opacity: 0.7; }
+
+    /* ── Status ── */
+    .status { font-size: 14px; min-height: 24px; margin-top: 8px; text-align: center; }
+    .status.ok  { color: var(--green); }
+    .status.err { color: var(--danger); }
+
+    /* ── Detail-Overlay ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      display: flex; flex-direction: column;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .overlay-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px;
+      background: var(--red);
+      flex-shrink: 0;
+    }
+    .back-btn {
+      background: none; border: none; color: #fff;
+      font-size: 17px; font-family: inherit;
+      cursor: pointer; padding: 0 4px;
+    }
+    .overlay-title { font-size: 17px; font-weight: 700; color: #fff; flex: 1; }
+    .edit-btn {
+      background: rgba(255,255,255,0.2); border: none; color: #fff;
+      font-size: 14px; font-family: inherit; padding: 5px 12px;
+      border-radius: 14px; cursor: pointer;
+    }
+    .overlay-scroll {
+      flex: 1; overflow-y: auto; padding: 12px 12px 40px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Stammdaten-Tabelle ── */
+    .meta-table { width: 100%; font-size: 14px; }
+    .meta-table td { padding: 5px 0; vertical-align: top; }
+    .meta-table td:first-child { color: var(--label); width: 38%; padding-right: 8px; }
+
+    /* ── Prüfhistorie ── */
+    .pruef-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .pruef-row:last-child { border-bottom: none; }
+    .pruef-datum { font-family: 'Menlo', monospace; font-size: 12px; color: var(--label); width: 80px; flex-shrink: 0; }
+    .pruef-erg   { flex: 1; }
+    .pruef-bem   { font-size: 12px; color: var(--label); }
+    .erg-ok      { color: var(--green); font-weight: 600; }
+    .erg-warn    { color: var(--yellow); font-weight: 600; }
+    .erg-defekt  { color: var(--danger); font-weight: 600; }
+
+    /* ── Ampel-Badge ── */
+    .ablauf-badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 10px; font-size: 12px; font-weight: 600;
+    }
+    .ablauf-ok     { background: #d1fae5; color: #065f46; }
+    .ablauf-warn   { background: #fef3c7; color: #92400e; }
+    .ablauf-danger { background: #fee2e2; color: #991b1b; }
+
+    /* ── Geräte-Edit ── */
+    .edit-overlay { z-index: 200; }
+
+    /* ── Setup ── */
+    .setup {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 48px 24px 40px; max-width: 480px; margin: 0 auto;
+    }
+    .setup-icon { margin-bottom: 16px; }
+    .setup-icon img { width: 88px; height: 88px; border-radius: 20px; box-shadow: 0 4px 20px rgba(230,57,70,0.35); }
+    .setup h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .setup > p { color: var(--label); margin-bottom: 24px; text-align: center; line-height: 1.5; }
+
+    /* ── Footer ── */
+    .footer-links { text-align: center; padding: 4px 0 12px; }
+    .app-version  { display: block; font-size: 11px; color: var(--label); padding: 2px 0 4px; }
+    .link-btn {
+      background: none; border: none; color: var(--blue);
+      font-size: 14px; font-family: inherit;
+      cursor: pointer; padding: 8px 16px;
+    }
+    .link-btn.danger { color: var(--danger); }
+
+    /* ── Optgruppen im Select ── */
+    select optgroup { font-weight: 700; }
+    select option   { font-weight: 400; }
+  </style>
+</head>
+<body>
+  <div id="root"><div style="padding:40px;text-align:center;color:#636366">Lädt…</div></div>
+  <script src="app.js"></script>
+</body>
+</html>
