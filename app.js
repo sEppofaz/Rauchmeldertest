@@ -518,10 +518,10 @@ function showEditGeraet(id) {
         <div class="field-group"><label>Modell</label>
           <input id="eg-modell" type="text" value="${esc(g.modell ?? '')}"></div>
         <div class="field-group"><label>Aktivierung (YYYY-MM-DD)</label>
-          <input id="eg-aktiv" type="date" value="${g.aktivierung ?? ''}"></div>
+          <input id="eg-aktiv" type="date" value="${g.aktivierung ?? ''}" oninput="calcAblauf()"></div>
         <div class="field-group"><label>Laufzeit (Jahre)</label>
-          <input id="eg-laufzeit" type="number" value="${g.laufzeit_jahre ?? ''}"></div>
-        <div class="field-group"><label>Ablauf (YYYY-MM-DD)</label>
+          <input id="eg-laufzeit" type="number" value="${g.laufzeit_jahre ?? ''}" oninput="calcAblauf()"></div>
+        <div class="field-group"><label>Ablauf</label>
           <input id="eg-ablauf" type="date" value="${g.ablauf ?? ''}"></div>
         <div class="field-group"><label>Prüfmethode</label>
           <input id="eg-pruef" type="text" value="${esc(g.pruefmethode ?? '')}"></div>
@@ -532,6 +532,18 @@ function showEditGeraet(id) {
       </div>
     </div>`;
   document.body.appendChild(overlay);
+}
+
+function calcAblauf() {
+  const aktiv    = document.getElementById('eg-aktiv')?.value;
+  const laufzeit = parseInt(document.getElementById('eg-laufzeit')?.value);
+  const ablaufEl = document.getElementById('eg-ablauf');
+  if (!ablaufEl) return;
+  if (aktiv && laufzeit > 0) {
+    const d = new Date(aktiv);
+    d.setFullYear(d.getFullYear() + laufzeit);
+    ablaufEl.value = d.toISOString().slice(0, 10);
+  }
 }
 
 function closeEditGeraet() {
