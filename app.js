@@ -249,6 +249,9 @@ function renderGeraete() {
     html += '</div>';
   }
 
+  html += `<div class="card">
+    <button class="btn-primary" onclick="showEditGeraet(null)">+ Neues Gerät eintragen</button>
+  </div>`;
   html += `<div class="footer-links">
     <button class="link-btn" onclick="applyUpdate()">🔄 Aktualisieren</button>
     <button class="link-btn danger" onclick="disconnect()">Dropbox trennen</button>
@@ -438,7 +441,9 @@ async function submitPruefung() {
 
 function showEditGeraet(id) {
   editGeraetId = id;
-  const g = _data.geraete.find(x => x.id === id);
+  const isNew = id === null;
+  const g = isNew ? { ort: '', name: '', typ: 'Rauchmelder', modell: '', aktivierung: '', laufzeit_jahre: '', ablauf: '', pruefmethode: 'Funktionstaste', bemerkung: '' }
+                  : _data.geraete.find(x => x.id === id);
   if (!g) return;
 
   const orte = [...new Set(_data.geraete.map(x => x.ort))];
@@ -452,7 +457,7 @@ function showEditGeraet(id) {
   overlay.innerHTML = `
     <div class="overlay-header">
       <button class="back-btn" onclick="closeEditGeraet()">‹ Zurück</button>
-      <span class="overlay-title">Gerät bearbeiten</span>
+      <span class="overlay-title">${isNew ? 'Neues Gerät' : 'Gerät bearbeiten'}</span>
     </div>
     <div class="overlay-scroll">
       <div class="card">
@@ -512,8 +517,15 @@ async function saveGeraet() {
     } catch (_) {}
   }
 
+  if (!g.name) { setS('⚠️ Name erforderlich', false); return; }
+  if (!g.ort)  { setS('⚠️ Ort erforderlich', false); return; }
+
   setS('⏳ Speichern…');
   try {
+    if (editGeraetId === null) {
+      g.id = uid();
+      _data.geraete.push(g);
+    }
     await saveData();
     setS('✅ Gespeichert');
     setTimeout(() => {
