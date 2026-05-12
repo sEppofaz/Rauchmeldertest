@@ -148,6 +148,7 @@ let _data  = null;
 let detailGeraetId = null;
 let editGeraetId   = null;
 let selectedErgebnis = 'ok';
+let showArchiv = false;
 
 function emptyData() { return { v: 1, geraete: [], pruefungen: [] }; }
 
@@ -208,50 +209,74 @@ function renderTab() {
 
 // ── Tab 1: Geräteliste ───────────────────────────────────────────
 
+function geraetItemHtml(g) {
+  const status = ampelStatus(g, _data.pruefungen);
+  const ps = _data.pruefungen.filter(p => p.geraet_id === g.id).sort((a, b) => a.datum < b.datum ? 1 : -1);
+  const lastDatum = ps[0]?.datum ?? null;
+  const lastErg   = ps[0]?.ergebnis ?? null;
+  const meta = lastDatum
+    ? `${fmtDate(lastDatum)} · ${lastErg ?? '?'}${g.ablauf ? ' · Ablauf ' + fmtDate(g.ablauf) : ''}`
+    : `Noch nie geprüft${g.ablauf ? ' · Ablauf ' + fmtDate(g.ablauf) : ''}`;
+  return `<div class="geraet-item" onclick="showDetail('${esc(g.id)}')">
+    <div class="ampel ampel-${status}"></div>
+    <div class="geraet-info">
+      <div class="geraet-name">${esc(g.name)}</div>
+      <div class="geraet-meta">${esc(meta)}</div>
+    </div>
+    <div class="geraet-arrow">›</div>
+  </div>`;
+}
+
 function renderGeraete() {
   const scroll = document.getElementById('scroll');
   if (!_data) { scroll.innerHTML = '<p style="padding:20px;color:var(--label)">Lade…</p>'; loadData().then(renderGeraete); return; }
 
-  const orte = [...new Set(_data.geraete.map(g => g.ort))];
+  const aktiv     = _data.geraete.filter(g => !g.archiviert);
+  const archiviert = _data.geraete.filter(g => g.archiviert);
+  const orte = [...new Set(aktiv.map(g => g.ort))];
   let html = '';
 
-  // Zusammenfassung oben
-  const rot   = _data.geraete.filter(g => ampelStatus(g, _data.pruefungen) === 'rot').length;
-  const gelb  = _data.geraete.filter(g => ampelStatus(g, _data.pruefungen) === 'gelb').length;
-  const gruen = _data.geraete.filter(g => ampelStatus(g, _data.pruefungen) === 'gruen').length;
+  // Zusammenfassung (nur aktive Geräte)
+  const rot   = aktiv.filter(g => ampelStatus(g, _data.pruefungen) === 'rot').length;
+  const gelb  = aktiv.filter(g => ampelStatus(g, _data.pruefungen) === 'gelb').length;
+  const gruen = aktiv.filter(g => ampelStatus(g, _data.pruefungen) === 'gruen').length;
   html += `<div class="card" style="display:flex;gap:16px;justify-content:center;text-align:center">
     <div><div style="font-size:22px;font-weight:700;color:var(--green)">${gruen}</div><div style="font-size:11px;color:var(--label)">OK</div></div>
     <div><div style="font-size:22px;font-weight:700;color:var(--yellow)">${gelb}</div><div style="font-size:11px;color:var(--label)">Prüfen</div></div>
     <div><div style="font-size:22px;font-weight:700;color:var(--danger)">${rot}</div><div style="font-size:11px;color:var(--label)">Überfällig</div></div>
-    <div><div style="font-size:22px;font-weight:700;color:var(--text)">${_data.geraete.length}</div><div style="font-size:11px;color:var(--label)">Gesamt</div></div>
+    <div><div style="font-size:22px;font-weight:700;color:var(--text)">${aktiv.length}</div><div style="font-size:11px;color:var(--label)">Aktiv</div></div>
   </div>`;
 
+  // Aktive Geräte nach Ort
   for (const ort of orte) {
-    const geraete = _data.geraete.filter(g => g.ort === ort);
+    const geraete = aktiv.filter(g => g.ort === ort);
     html += `<div class="section-title">${esc(ort)}</div><div class="card" style="padding:0 16px">`;
-    for (const g of geraete) {
-      const status = ampelStatus(g, _data.pruefungen);
-      const ps = _data.pruefungen.filter(p => p.geraet_id === g.id).sort((a, b) => a.datum < b.datum ? 1 : -1);
-      const lastDatum = ps[0]?.datum ?? null;
-      const lastErg   = ps[0]?.ergebnis ?? null;
-      const meta = lastDatum
-        ? `${fmtDate(lastDatum)} · ${lastErg ?? '?'}${g.ablauf ? ' · Ablauf ' + fmtDate(g.ablauf) : ''}`
-        : `Noch nie geprüft${g.ablauf ? ' · Ablauf ' + fmtDate(g.ablauf) : ''}`;
-      html += `<div class="geraet-item" onclick="showDetail('${esc(g.id)}')">
-        <div class="ampel ampel-${status}"></div>
-        <div class="geraet-info">
-          <div class="geraet-name">${esc(g.name)}</div>
-          <div class="geraet-meta">${esc(meta)}</div>
-        </div>
-        <div class="geraet-arrow">›</div>
-      </div>`;
-    }
+    for (const g of geraete) html += geraetItemHtml(g);
     html += '</div>';
   }
 
+  // Neues Gerät
   html += `<div class="card">
     <button class="btn-primary" onclick="showEditGeraet(null)">+ Neues Gerät eintragen</button>
   </div>`;
+
+  // Archiv
+  if (archiviert.length) {
+    html += `<button class="link-btn" style="display:block;width:100%;text-align:left;padding:8px 4px;color:var(--label)"
+      onclick="showArchiv=!showArchiv;renderGeraete()">
+      📦 Archiv (${archiviert.length} Gerät${archiviert.length > 1 ? 'e' : ''}) ${showArchiv ? '▲' : '▼'}
+    </button>`;
+    if (showArchiv) {
+      const archivOrte = [...new Set(archiviert.map(g => g.ort))];
+      for (const ort of archivOrte) {
+        const geraete = archiviert.filter(g => g.ort === ort);
+        html += `<div class="section-title" style="color:var(--border)">${esc(ort)}</div>
+          <div class="card" style="padding:0 16px;opacity:0.55">`;
+        for (const g of geraete) html += geraetItemHtml(g);
+        html += '</div>';
+      }
+    }
+  }
   html += `<div class="footer-links">
     <button class="link-btn" onclick="applyUpdate()">🔄 Aktualisieren</button>
     <button class="link-btn danger" onclick="disconnect()">Dropbox trennen</button>
@@ -323,8 +348,14 @@ function renderDetailOverlay() {
       </div>
       <div class="section-title">Prüfhistorie (${ps.length})</div>
       <div class="card" style="padding:0 16px">${histHtml}</div>
-      <div class="card">
+      ${!g.archiviert ? `<div class="card">
         <button class="btn-primary" onclick="schnellPruefung('${esc(g.id)}')">✅ Neue Prüfung eintragen</button>
+      </div>` : ''}
+      <div class="card">
+        <button class="btn-secondary" style="color:var(--label);font-size:15px"
+          onclick="toggleArchivGeraet('${esc(g.id)}')">
+          ${g.archiviert ? '🔄 Wiederherstellen' : '📦 Ins Archiv verschieben'}
+        </button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -333,6 +364,22 @@ function renderDetailOverlay() {
 function closeDetail() {
   document.getElementById('detail-overlay')?.remove();
   detailGeraetId = null;
+}
+
+async function toggleArchivGeraet(id) {
+  const g = _data.geraete.find(x => x.id === id);
+  if (!g) return;
+  const wirdArchiviert = !g.archiviert;
+  if (wirdArchiviert && !confirm(`„${g.name}" ins Archiv verschieben?`)) return;
+  g.archiviert = wirdArchiviert || undefined;
+  try {
+    await saveData();
+    closeDetail();
+    if (wirdArchiviert) showArchiv = false;
+    renderGeraete();
+  } catch (e) {
+    alert('Fehler: ' + e.message);
+  }
 }
 
 // ── Schnell-Prüfung aus Detail ───────────────────────────────────
