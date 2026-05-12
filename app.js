@@ -518,9 +518,9 @@ function showEditGeraet(id) {
         <div class="field-group"><label>Modell</label>
           <input id="eg-modell" type="text" value="${esc(g.modell ?? '')}"></div>
         <div class="field-group"><label>Aktivierung (YYYY-MM-DD)</label>
-          <input id="eg-aktiv" type="date" value="${g.aktivierung ?? ''}" oninput="calcAblauf()"></div>
+          <input id="eg-aktiv" type="date" value="${g.aktivierung ?? ''}" oninput="calcAblauf()" onchange="calcAblauf()"></div>
         <div class="field-group"><label>Laufzeit (Jahre)</label>
-          <input id="eg-laufzeit" type="number" value="${g.laufzeit_jahre ?? ''}" oninput="calcAblauf()"></div>
+          <input id="eg-laufzeit" type="number" value="${g.laufzeit_jahre ?? ''}" oninput="calcAblauf()" onchange="calcAblauf()"></div>
         <div class="field-group"><label>Ablauf</label>
           <input id="eg-ablauf" type="date" value="${g.ablauf ?? ''}"></div>
         <div class="field-group"><label>Prüfmethode</label>
